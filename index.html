@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriCore - Bilan Énergétique & Nutritionnel</title>
+  <!-- Ligne à ajouter pour votre Favicon / Logo -->
+  <link rel="icon" type="image/png" href="NC.png">
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1E1E1E;
+      --input-bg: #2A2A2A;
+      --primary-yellow: #FFDE00;
+      --text-main: #FFFFFF;
+      --text-muted: #A0A0A0;
+      --border-color: #333333;
+      --error-red: #FF4D4D;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .app-card {
+      background-color: var(--card-bg);
+      width: 100%;
+      max-width: 520px;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Personnalisation des flèches d'incrémentation (Spinners) */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      filter: invert(0.8);
+      cursor: pointer;
+      opacity: 0.5;
+    }
+    input[type="number"]::-webkit-inner-spin-button:hover {
+      opacity: 1;
+    }
+
+    /* Pop-up d'erreur */
+    .modal-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 16px;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background-color: var(--card-bg);
+      border: 1px solid var(--error-red);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      max-width: 380px;
+    }
+
+    .modal-box h3 {
+      color: var(--error-red);
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    .modal-box p {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    /* Header & Barre de progression */
+    .progress-header {
+      display: none;
+      margin-bottom: 30px;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .progress-bar-bg {
+      background-color: var(--input-bg);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      background-color: var(--primary-yellow);
+      height: 100%;
+      width: 33%;
+      transition: width 0.4s ease;
+    }
+
+    /* Étapes & Animations */
+    .step-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .step {
+      display: none;
+      width: 100%;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .slide-in-right {
+      animation: slideInRight 0.35s forwards cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .slide-in-left {
+      animation: slideInLeft 0.35s forwards cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(60px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(-60px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Landing page */
+    .landing-hero {
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .landing-hero .welcome-tag {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .landing-hero h1 {
+      font-size: 2.6rem;
+      color: var(--primary-yellow);
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+      font-weight: 900;
+    }
+
+    .landing-hero p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+      color: var(--primary-yellow);
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-yellow);
+    }
+
+    /* Grille d'options */
+    .option-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .option-card {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .option-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .option-card.selected {
+      border-color: var(--primary-yellow);
+      color: var(--primary-yellow);
+      background-color: #26230f;
+    }
+
+    .tag-danger {
+      color: var(--error-red);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* Boutons de navigation */
+    .nav-btns {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 32px;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: transform 0.1s ease, opacity 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-yellow);
+      color: #000;
+      flex: 1;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Écran de chargement */
+    .loading-state {
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--input-bg);
+      border-top: 4px solid var(--primary-yellow);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Dashboard final */
+    .dashboard-hero {
+      background-color: #26230f;
+      border: 1px solid var(--primary-yellow);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-hero .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .dashboard-hero .value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary-yellow);
+      margin: 5px 0;
+    }
+
+    .dashboard-hero .subtext {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+      margin-top: 4px;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .info-card {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .info-card .title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .info-card .num {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 6px 0;
+    }
+
+    .info-card .subtext {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.2;
+    }
+
+    .macro-header {
+      margin-bottom: 12px;
+    }
+
+    .macro-header h3 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      color: var(--primary-yellow);
+      margin-bottom: 4px;
+    }
+
+    .macro-header p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .macro-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .macro-item {
+      background-color: var(--input-bg);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid var(--primary-yellow);
+    }
+
+    .macro-name {
+      font-weight: 600;
+    }
+
+    .macro-val {
+      font-weight: 700;
+      color: var(--primary-yellow);
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+
+  <!-- Pop-up d'erreur -->
+  <div class="modal-overlay" id="error-modal">
+    <div class="modal-box">
+      <h3>Champ requis ou invalide</h3>
+      <p id="error-message">Veuillez remplir correctement toutes les informations.</p>
+      <button class="btn btn-primary" onclick="closeModal()">Compris</button>
+    </div>
+  </div>
+  
+  <!-- En-tête avec barre de progression -->
+  <div class="progress-header" id="progress-header">
+    <div class="progress-text">
+      <span id="step-label">Étape 1 sur 3</span>
+      <span id="percent-label">33%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <div class="step-container">
+    
+    <!-- Page d'accueil (Landing Page) -->
+    <div class="step active" id="step-home">
+      <div class="landing-hero">
+        <div class="welcome-tag">Bienvenue chez</div>
+        <h1>NUTRICORE</h1>
+        <p>Calculez précisément vos besoins caloriques, votre métabolisme de base (BMR) et votre répartition en macronutriments en moins de 2 minutes.</p>
+        <button class="btn btn-primary" onclick="startWizard()">Commencer mon bilan</button>
+      </div>
+    </div>
+
+    <!-- Formulaire / Sondage -->
+    <form id="onboarding-form" onsubmit="event.preventDefault();">
+      
+      <!-- Étape 1 : Informations de base -->
+      <div class="step" id="step-1">
+        <h2>1. Vos Mensurations</h2>
+        
+        <div class="input-group">
+          <label for="gender">Sexe</label>
+          <select id="gender">
+            <option value="" disabled selected>Sélectionnez votre sexe</option>
+            <option value="male">Homme</option>
+            <option value="female">Femme</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="age">Âge (ans)</label>
+          <input type="number" id="age" placeholder="ex: 25" min="1" max="120">
+        </div>
+
+        <div class="input-group">
+          <label for="height">Taille (cm)</label>
+          <input type="number" id="height" placeholder="ex: 175" min="50" max="280">
+        </div>
+
+        <div class="input-group">
+          <label for="weight">Poids (kg)</label>
+          <input type="number" id="weight" placeholder="ex: 70" min="20" max="600" step="0.1">
+        </div>
+
+        <div class="nav-btns">
+          <button class="btn btn-primary" onclick="validateAndGoTo(2, 'next')">Continuer</button>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Niveau d'activité -->
+      <div class="step" id="step-2">
+        <h2>2. Activité Physique</h2>
+        <div class="option-grid">
+          <div class="option-card" onclick="setActivity('sedentary', this)">
+            <span>Sédentaire</span>
+            <small style="color: var(--text-muted)">Bureau / Peu ou pas de sport</small>
+          </div>
+          <div class="option-card" onclick="setActivity('lightly_active', this)">
+            <span>Légèrement actif</span>
+            <small style="color: var(--text-muted)">1 à 3 séances / sem</small>
+          </div>
+          <div class="option-card" onclick="setActivity('moderately_active', this)">
+            <span>Modérément actif</span>
+            <small style="color: var(--text-muted)">3 à 5 séances / sem</small>
+          </div>
+          <div class="option-card" onclick="setActivity('very_active', this)">
+            <span>Très actif</span>
+            <small style="color: var(--text-muted)">5 à 6 séances / sem</small>
+          </div>
+        </div>
+
+        <div class="nav-btns">
+          <button class="btn btn-secondary" onclick="goToStep(1, 'prev')">Retour</button>
+          <button class="btn btn-primary" onclick="validateAndGoTo(3, 'next')">Continuer</button>
+        </div>
+      </div>
+
+      <!-- Étape 3 : Objectif principal -->
+      <div class="step" id="step-3">
+        <h2>3. Votre Objectif</h2>
+        <div class="option-grid">
+          <div class="option-card" onclick="setGoal('cut_extreme', this)">
+            <span>Sèche / Perte de gras excessive</span>
+            <span class="tag-danger">(Déconseillé)</span>
+          </div>
+          <div class="option-card" onclick="setGoal('cut', this)">
+            <span>Sèche / Perte de gras</span>
+          </div>
+          <div class="option-card" onclick="setGoal('maintain', this)">
+            <span>Maintien du poids</span>
+          </div>
+          <div class="option-card" onclick="setGoal('bulk', this)">
+            <span>Prise de masse</span>
+          </div>
+          <div class="option-card" onclick="setGoal('bulk_extreme', this)">
+            <span>Prise de masse excessive</span>
+            <span class="tag-danger">(Déconseillé)</span>
+          </div>
+        </div>
+
+        <div class="nav-btns">
+          <button class="btn btn-secondary" onclick="goToStep(2, 'prev')">Retour</button>
+          <button class="btn btn-primary" onclick="submitOnboarding()">Générer mon bilan</button>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- Écran de chargement -->
+    <div class="step" id="step-loading">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p style="color: var(--text-muted);">Calcul de votre profil énergétique en cours...</p>
+      </div>
+    </div>
+
+    <!-- Dashboard Récapitulatif Final -->
+    <div class="step" id="step-dashboard">
+      <h2>Votre Bilan Nutritionnel</h2>
+      
+      <div class="dashboard-hero">
+        <div class="label">Objectif Calorique Journalier</div>
+        <div class="value" id="res-target-cal">-- kcal</div>
+        <div class="subtext" id="res-target-subtext">C'est le nombre total de calories que vous devez consommer par jour pour atteindre votre objectif.</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-card">
+          <div class="title">Métabolisme de base (BMR)</div>
+          <div class="num" id="res-bmr">-- kcal</div>
+          <div class="subtext">Ce que votre corps brûle au repos total, sans rien faire de la journée.</div>
+        </div>
+        <div class="info-card">
+          <div class="title">Dépense Totale (TDEE)</div>
+          <div class="num" id="res-tdee">-- kcal</div>
+          <div class="subtext">Ce que vous brûlez au total par jour en comptant vos activités et votre sport.</div>
+        </div>
+      </div>
+
+      <div class="macro-header">
+        <h3>Répartition des Nutriments</h3>
+        <p>Voici les quantités exactes à consommer par jour. Vous pouvez librement les répartir sur 2, 3 ou 4 repas selon votre choix.</p>
+      </div>
+
+      <div class="macro-section">
+        <div class="macro-item">
+          <span class="macro-name">Protéines</span>
+          <span class="macro-val" id="res-prot">-- g</span>
+        </div>
+        <div class="macro-item">
+          <span class="macro-name">Lipides</span>
+          <span class="macro-val" id="res-fat">-- g</span>
+        </div>
+        <div class="macro-item">
+          <span class="macro-name">Glucides</span>
+          <span class="macro-val" id="res-carbs">-- g</span>
+        </div>
+      </div>
+
+      <div class="nav-btns">
+        <button class="btn btn-secondary" style="width: 100%;" onclick="resetForm()">Recalculer</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  let formData = {
+    activityLevel: null,
+    goal: null
+  };
+
+  function showError(msg) {
+    document.getElementById('error-message').innerText = msg;
+    document.getElementById('error-modal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('error-modal').style.display = 'none';
+  }
+
+  function startWizard() {
+    document.getElementById('progress-header').style.display = 'block';
+    goToStep(1, 'next');
+  }
+
+  function goToStep(stepNumber, direction = 'next') {
+    const steps = document.querySelectorAll('.step');
+    steps.forEach(step => {
+      step.classList.remove('active', 'slide-in-right', 'slide-in-left');
+    });
+
+    let targetEl;
+    if (typeof stepNumber === 'number') {
+      targetEl = document.getElementById(`step-${stepNumber}`);
+      const percent = Math.round((stepNumber / 3) * 100);
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+      document.getElementById('percent-label').innerText = `${percent}%`;
+      document.getElementById('step-label').innerText = `Étape ${stepNumber} sur 3`;
+    } else {
+      targetEl = document.getElementById(`step-${stepNumber}`);
+    }
+
+    if (targetEl) {
+      targetEl.classList.add('active');
+      if (direction === 'next') {
+        targetEl.classList.add('slide-in-right');
+      } else if (direction === 'prev') {
+        targetEl.classList.add('slide-in-left');
+      }
+    }
+  }
+
+  function validateAndGoTo(nextStep, direction) {
+    if (nextStep === 2) {
+      const gender = document.getElementById('gender').value;
+      const age = parseFloat(document.getElementById('age').value);
+      const height = parseFloat(document.getElementById('height').value);
+      const weight = parseFloat(document.getElementById('weight').value);
+
+      if (!gender) {
+        showError("Veuillez sélectionner votre sexe.");
+        return;
+      }
+      if (isNaN(age) || age < 1 || age > 120) {
+        showError("Veuillez saisir un âge valide (entre 1 et 120 ans).");
+        return;
+      }
+      if (isNaN(height) || height < 50 || height > 280) {
+        showError("Veuillez saisir une taille valide en cm (entre 50 cm et 280 cm).");
+        return;
+      }
+      if (isNaN(weight) || weight < 20 || weight > 600) {
+        showError("Veuillez saisir un poids valide en kg (entre 20 kg et 600 kg).");
+        return;
+      }
+    }
+
+    if (nextStep === 3) {
+      if (!formData.activityLevel) {
+        showError("Veuillez sélectionner votre niveau d'activité physique.");
+        return;
+      }
+    }
+
+    goToStep(nextStep, direction);
+  }
+
+  function setActivity(value, element) {
+    formData.activityLevel = value;
+    element.parentElement.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+  }
+
+  function setGoal(value, element) {
+    formData.goal = value;
+    element.parentElement.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+  }
+
+  function submitOnboarding() {
+    if (!formData.goal) {
+      showError("Veuillez sélectionner votre objectif principal.");
+      return;
+    }
+
+    document.getElementById('progress-header').style.display = 'none';
+    goToStep('loading', 'next');
+
+    const gender = document.getElementById('gender').value;
+    const age = parseInt(document.getElementById('age').value);
+    const heightCm = parseInt(document.getElementById('height').value);
+    const weightKg = parseFloat(document.getElementById('weight').value);
+
+    // 1. Calcul du BMR
+    let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+    bmr += (gender === 'male') ? 5 : -161;
+
+    // 2. Facteurs de TDEE
+    const activityMultipliers = {
+      sedentary: 1.2,
+      lightly_active: 1.375,
+      moderately_active: 1.55,
+      very_active: 1.725
+    };
+    const tdee = bmr * (activityMultipliers[formData.activityLevel] || 1.2);
+
+    // 3. Objectif & Texte dynamique
+    let targetCalories = tdee;
+    let goalText = "votre objectif";
+
+    if (formData.goal === 'cut_extreme') {
+      targetCalories -= 800;
+      goalText = "votre sèche / perte de gras excessive";
+    } else if (formData.goal === 'cut') {
+      targetCalories -= 500;
+      goalText = "votre sèche / perte de gras";
+    } else if (formData.goal === 'maintain') {
+      goalText = "votre maintien du poids";
+    } else if (formData.goal === 'bulk') {
+      targetCalories += 300;
+      goalText = "votre prise de masse";
+    } else if (formData.goal === 'bulk_extreme') {
+      targetCalories += 600;
+      goalText = "votre prise de masse excessive";
+    }
+
+    // 4. Macronutriments
+    const proteinGrams = Math.round(weightKg * 2);
+    const fatGrams = Math.round(weightKg * 1);
+    const carbCalories = targetCalories - ((proteinGrams * 4) + (fatGrams * 9));
+    const carbGrams = Math.max(0, Math.round(carbCalories / 4));
+
+    setTimeout(() => {
+      document.getElementById('res-target-cal').innerText = `${Math.round(targetCalories)} kcal`;
+      document.getElementById('res-target-subtext').innerText = `C'est le nombre total de calories que vous devez consommer par jour pour atteindre ${goalText}.`;
+      document.getElementById('res-bmr').innerText = `${Math.round(bmr)} kcal`;
+      document.getElementById('res-tdee').innerText = `${Math.round(tdee)} kcal`;
+      document.getElementById('res-prot').innerText = `${proteinGrams} g`;
+      document.getElementById('res-fat').innerText = `${fatGrams} g`;
+      document.getElementById('res-carbs').innerText = `${carbGrams} g`;
+
+      goToStep('dashboard', 'next');
+    }, 800);
+  }
+
+  function resetForm() {
+    formData.activityLevel = null;
+    formData.goal = null;
+    document.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+    document.getElementById('onboarding-form').reset();
+    
+    document.getElementById('progress-header').style.display = 'none';
+    goToStep('home', 'prev');
+  }
+</script>
+
+</body>
+</html>
